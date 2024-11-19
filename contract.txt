@@ -1,12 +1,8 @@
 // REQUEST
-// PINE VALLEY
-// POST /healthcare/doctor
+// POST TO URL SERVICE
 {
   "doctorType": "doctor type"
 }
-
-// GRAND OAK
-// POST /healthcare/doctor/<DOCTOR_TYPE>
 
 
 // RESPONSE BROKER
