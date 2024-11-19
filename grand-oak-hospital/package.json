@@ -1,0 +1,48 @@
+{
+  "name": "blog-be",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/src/app.js",
+  "scripts": {
+    "preinstall": "npx only-allow yarn",
+    "dev": "nodemon src/app.ts",
+    "migrate:dev": "prisma migrate dev --preview-feature",
+    "start": "node dist/src/cores/app.js",
+    "build": "npx tsc",
+    "lint": "eslint . --ext .ts",
+    "test": "jest --runInBand --forceExit --detectOpenHandles --coverage",
+    "build-start": "yarn build && yarn start"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.7",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.13.0",
+    "@typescript-eslint/parser": "^8.13.0",
+    "eslint": "^9.14.0",
+    "prisma": "^5.22.0",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "@types/amqplib": "^0.10.5",
+    "amqplib": "^0.10.4",
+    "axios": "^1.7.7",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "http-status-codes": "^2.3.0",
+    "nodemon": "^3.1.7",
+    "ts-node": "^10.9.2",
+    "winston": "^3.16.0",
+    "zod": "^3.23.8"
+  },
+  "packageManager": "yarn@1.22.22"
+}
