@@ -1,38 +1,49 @@
+// REQUEST
+// PINE VALLEY
+// POST /healthcare/doctor
 {
-  "pineValley request": {
-    "doctorType": "disini ada mapping dict 1-X, 1: spesialis apa"
-  },
-  "grandOak request": "Pakai GET",
+  "doctorType": "doctor type"
+}
 
-  "data return": {
+// GRAND OAK
+// POST /healthcare/doctor/<DOCTOR_TYPE>
+
+
+// RESPONSE BROKER
+{
+  "data": {
     "name": "nama dokter",
     "type": "tipe dokter",
     "time": "time format XX:XX AM/PM"
-  },
-  "nanti data di broker": [
+  }[][]
+}
+
+// RESPONSE e.g
+{
+  "data": [
     [
-      {
-        "name": "John Mathew",
-        "time": "03:30 PM",
-        "hospital": "Grand Oak"
-      },
-      {
-        "name": "Allan Silvester",
-        "time": "04:30 PM",
-        "hospital": "Grand Oak"
-      }
+        {
+            "name": "John Mathew",
+            "time": "03:30 PM",
+            "hospital": "Grand Oak"
+        },
+        {
+            "name": "Allan Silvester",
+            "time": "04:30 PM",
+            "hospital": "Grand Oak"
+        }
     ],
     [
-      {
-        "name": "John Mathew",
-        "time": "07:30 AM",
-        "hospital": "pineValley"
-      },
-      {
-        "name": "Roma Katherine",
-        "time": "04:30 PM",
-        "hospital": "pineValley"
-      }
+        {
+            "name": "John Mathew",
+            "time": "07:30 AM",
+            "hospital": "pineValley"
+        },
+        {
+            "name": "Roma Katherine",
+            "time": "04:30 PM",
+            "hospital": "pineValley"
+        }
     ]
-  ]
+]
 }
