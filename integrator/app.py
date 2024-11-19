@@ -68,7 +68,7 @@ def healthcare_api():
     
     return aggregated_data
     
-# TODO: buat callback jadi masukin data ke json, terus return json nya ke HTTP
+# TODO: buat callback jadi masukin data ke list, terus return list nya ke HTTP
 # Jadi HTTP itu bakal ngelakuin:
 # request dan diolah lalu dapet data
 # data yang didapetin dimasukin ke list, yang bakal di return
