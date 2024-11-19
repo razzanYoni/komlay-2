@@ -1,7 +1,6 @@
 import client, { Channel, Connection } from 'amqplib';
 import dotenv from 'dotenv';
 
-
 dotenv.config();
 
 // Config
@@ -24,19 +23,27 @@ interface DoctorRequestProcessor {
 class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
   private connection!: Connection;
   private channel!: Channel;
-  private doctors: Doctor[][] = [
-    [
-      {
-        name: "John Mathew",
-        time: "07:30 AM",
-        type: "general"
-      },
-      {
-        name: "Roma Katherine",
-        time: "04:30 PM",
-        type: "ophthalmologist"
-      }
-    ]
+  private doctors: Doctor[] = [
+    {
+      name: "John Mathew",
+      time: "07:30 AM",
+      type: "general"
+    },
+    {
+      name: "Roma Katherine",
+      time: "04:30 PM",
+      type: "ophthalmologist"
+    },
+    {
+      name: "Michael Smith",
+      time: "09:00 AM",
+      type: "general"
+    },
+    {
+      name: "Emily Davis",
+      time: "02:00 PM",
+      type: "cardiologist"
+    }
   ];
 
   async connect() {
@@ -62,13 +69,6 @@ class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
     try {
       await this.connect();
 
-      // Process hardcoded doctor data
-      this.doctors.forEach(doctorGroup => {
-        doctorGroup.forEach(doctor => {
-          this.sendDoctorResponse(doctor);
-        });
-      });
-
       // Set up consumer to listen for dynamic requests
       await this.listenForDoctorRequests();
     } catch (error) {
@@ -76,16 +76,16 @@ class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
     }
   }
 
-  private async sendDoctorResponse(doctor: Doctor) {
+  private async sendDoctorResponse(doctors: Doctor[]) {
     try {
       // Send doctor information to response queue
       this.channel.sendToQueue(
         'doctor-response',
-        Buffer.from(JSON.stringify(doctor))
+        Buffer.from(JSON.stringify(doctors))
       );
-      console.log(`📨 Sent doctor response for ${doctor.name}`);
+      console.log(`📨 Sent doctor responses: ${doctors.map(d => d.name).join(', ')}`);
     } catch (error) {
-      console.error(`Failed to send doctor response for ${doctor.name}:`, error);
+      console.error('Failed to send doctor responses:', error);
     }
   }
 
@@ -94,17 +94,26 @@ class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
       await this.channel.consume('doctor-request', async (msg) => {
         if (msg) {
           try {
-            // Parse incoming request (if needed)
+            // Parse incoming request
             const requestData = JSON.parse(msg.content.toString());
             console.log('Received doctor request:', requestData);
 
-            // Find matching doctors based on request criteria
+            // Find matching doctors based on request type
             const matchedDoctors = this.findMatchingDoctors(requestData);
 
             // Send matched doctors
-            matchedDoctors.forEach(doctor => {
-              this.sendDoctorResponse(doctor);
-            });
+            if (matchedDoctors.length > 0) {
+              await this.sendDoctorResponse(matchedDoctors);
+            } else {
+              // Send no doctors found response
+              this.channel.sendToQueue(
+                'doctor-response',
+                Buffer.from(JSON.stringify({
+                  status: 'not_found',
+                  message: `No doctors found for type: ${requestData.type}`
+                }))
+              );
+            }
 
             // Acknowledge the message
             this.channel.ack(msg);
@@ -121,15 +130,16 @@ class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
     }
   }
 
-  private findMatchingDoctors(request: any): Doctor[] {
-    // Implement your matching logic here
-    // For now, return all doctors
-    return this.doctors.flat();
+  private findMatchingDoctors(request: { type: string }): Doctor[] {
+    // Find doctors matching the specific type
+    return this.doctors.filter(doctor =>
+      doctor.type.toLowerCase() === request.type.toLowerCase()
+    );
   }
 
   // Method to add new doctors dynamically
   addDoctor(doctor: Doctor) {
-    this.doctors[0].push(doctor);
+    this.doctors.push(doctor);
   }
 }
 
