@@ -14,7 +14,8 @@
   "data": {
     "name": "nama dokter",
     "type": "tipe dokter",
-    "time": "time format XX:XX AM/PM"
+    "time": "time format XX:XX AM/PM",
+    "source": "origin hospital"
   }[][]
 }
 
