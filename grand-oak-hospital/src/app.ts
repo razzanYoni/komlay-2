@@ -4,15 +4,18 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Config
-const rmqUser = String(process.env.RABBITMQ_USERNAME);
-const rmqPass = String(process.env.RABBITMQ_PASSWORD);
-const rmqHost = String(process.env.RABBITMQ_URL);
+const rmqQueue = String(process.env.RABBITMQ_QUEUE);
+const rmqBrokerQueue = String(process.env.BROKER_RESPONSE_QUEUE)
 
 // Interfaces
 interface Doctor {
   name: string;
   time: string;
   type: string;
+}
+
+interface DoctorResponse extends Doctor {
+  request_id: string;
 }
 
 interface DoctorRequestProcessor {
@@ -50,15 +53,15 @@ class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
     try {
       console.log('🔌 Connecting to RabbitMQ Server');
       this.connection = await client.connect(
-        `amqp://${rmqUser}:${rmqPass}@${rmqHost}:5672`
-      );
+        'amqp://localhost'
+      )
 
       this.channel = await this.connection.createChannel();
       console.log('✅ RabbitMQ Connection Established');
 
       // Declare queues
-      await this.channel.assertQueue('doctor-request', { durable: true });
-      await this.channel.assertQueue('doctor-response', { durable: true });
+      await this.channel.assertQueue(rmqQueue, { durable: false });
+      await this.channel.assertQueue(rmqBrokerQueue, { durable: false });
     } catch (error) {
       console.error('❌ RabbitMQ Connection Failed:', error);
       throw error;
@@ -76,11 +79,11 @@ class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
     }
   }
 
-  private async sendDoctorResponse(doctors: Doctor[]) {
+  private async sendDoctorResponse(doctors: DoctorResponse[]) {
     try {
       // Send doctor information to response queue
       this.channel.sendToQueue(
-        'doctor-response',
+        rmqBrokerQueue,
         Buffer.from(JSON.stringify(doctors))
       );
       console.log(`📨 Sent doctor responses: ${doctors.map(d => d.name).join(', ')}`);
@@ -91,7 +94,7 @@ class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
 
   private async listenForDoctorRequests() {
     try {
-      await this.channel.consume('doctor-request', async (msg) => {
+      await this.channel.consume(rmqQueue, async (msg) => {
         if (msg) {
           try {
             // Parse incoming request
@@ -107,10 +110,8 @@ class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
             } else {
               // Send no doctors found response
               this.channel.sendToQueue(
-                'doctor-response',
+                rmqBrokerQueue,
                 Buffer.from(JSON.stringify({
-                  status: 'not_found',
-                  message: `No doctors found for type: ${requestData.type}`
                 }))
               );
             }
@@ -130,11 +131,11 @@ class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
     }
   }
 
-  private findMatchingDoctors(request: { type: string }): Doctor[] {
+  private findMatchingDoctors(request: { doctorType: string, request_id: string }): DoctorResponse[] {
     // Find doctors matching the specific type
-    return this.doctors.filter(doctor =>
-      doctor.type.toLowerCase() === request.type.toLowerCase()
-    );
+    const _doctors = this.doctors.filter(doctor => doctor.type === request.doctorType)
+    return _doctors.map(doctor => ({ ...doctor, request_id: request.request_id }));
+
   }
 
   // Method to add new doctors dynamically

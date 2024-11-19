@@ -60,7 +60,7 @@ def healthcare_api():
 
     # Publish data to RabbitMQ
     rabbitmq_client.publish_message(PINEVALLEY, data)
-    # rabbitmq_client.publish_message(GRANDOAK, data)
+    rabbitmq_client.publish_message(GRANDOAK, data)
 
     aggregated_data = []
 
