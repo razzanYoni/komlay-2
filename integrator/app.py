@@ -4,6 +4,9 @@ import pika.connection
 import json
 import os
 from dotenv import load_dotenv
+import threading
+import uuid
+import time
 
 load_dotenv()
 
@@ -49,24 +52,34 @@ BROKERRESPONSE = os.environ.get('BROKER_RESPONSE_QUEUE')
 
 @app.route('/healthcare', methods=['GET'])
 def healthcare_api():
-    # Receive user data
+    # Generate a unique request id
+    request_id = str(uuid.uuid4())
+
     data = request.json
-    # "doctorType": "value"
-    
-    # Send messages to hospital queues
+    data['request_id'] = request_id
+
+    # Publish data to RabbitMQ
     rabbitmq_client.publish_message(PINEVALLEY, data)
     # rabbitmq_client.publish_message(GRANDOAK, data)
+
     aggregated_data = []
-    
+
     def callback(ch, method, properties, body):
-        print(f"Received {body}")
-        aggregated_data.append(body)
-        print(aggregated_data)
-      
-    # Consume response from hospitals
-    rabbitmq_client.consume_messages(BROKERRESPONSE, callback=callback)
-    
-    return aggregated_data
+        print(f"Received response for request {request_id}: {body}")
+        response = json.loads(body)
+        if response.get('request_id') == request_id:
+            aggregated_data.append(response)
+        return aggregated_data
+    # debug kenapa ini gabisa ngereturn semangat ia jgn mati dulu
+ 
+    while True:
+        rabbitmq_client.consume_messages(BROKERRESPONSE, callback)
+        time.sleep(1)
+        print ("lalala")
+        if len(aggregated_data) >= 1:  
+            print("haha")
+            return jsonify({"request_id": request_id, "data": aggregated_data}) 
+
     
 # TODO: buat callback jadi masukin data ke list, terus return list nya ke HTTP
 # Jadi HTTP itu bakal ngelakuin:

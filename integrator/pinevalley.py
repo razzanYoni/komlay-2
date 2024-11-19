@@ -13,7 +13,7 @@ def process_message(ch, method, properties, body):
     print(f"Processing message: {message}")
     
     # Simulate processing and send response
-    response = {"status": "success", "hospital": "Pine Valley"}
+    response = {"status": "success", "hospital": "Pine Valley", "request_id": message["request_id"]}
     send_response_to_queue(BROKER, response)
 
     ch.basic_ack(delivery_tag=method.delivery_tag)
