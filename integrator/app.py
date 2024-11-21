@@ -1,6 +1,5 @@
 import pika
 from flask import Flask, request, jsonify
-import pika.connection
 import json
 import os
 from dotenv import load_dotenv
@@ -30,12 +29,26 @@ class RabbitMQClient:
     self.channel.queue_declare(queue=queue_name)  # Declare the queue (idempotent)
     self.channel.basic_publish(exchange='', routing_key=queue_name, body=json.dumps(message))
 
-  def consume_messages(self, queue_name, callback):
+  def consume_messages(self, queue_name, request_id, message_list, timeout=10):
     self.connect()
     self.channel.queue_declare(queue=queue_name)
+    
+    start_time = time.time()
+    
+    def callback(ch, method, properties, body):
+        response = json.loads(body)
+        if response.get('request_id') == request_id:
+            message_list.append(response)
+            print(f"Received response: {response}, request_id: {request_id}")
+    
     self.channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
-    print(f"Consuming messages from {queue_name}...")
-    self.channel.start_consuming()
+    print(f"Waiting for response for request_id: {request_id}")
+    while time.time() - start_time < timeout:
+        self.channel.connection.process_data_events(time_limit=1)
+        if message_list:  
+            break
+    
+    self.channel.stop_consuming()
 
   def close(self):
     if self.channel and not self.channel.is_closed:
@@ -62,29 +75,24 @@ def healthcare_api():
     rabbitmq_client.publish_message(PINEVALLEY, data)
     rabbitmq_client.publish_message(GRANDOAK, data)
 
+    message_list = [] 
+
+    def consume_thread():
+        rabbitmq_client.consume_messages(BROKERRESPONSE, request_id, message_list)
+
+    thread = threading.Thread(target=consume_thread)
+    thread.start()
+    thread.join(timeout=10)
+
     aggregated_data = []
+    for message in message_list:
+        if request_id in message.values():
+            aggregated_data.append(message)
 
-    def callback(ch, method, properties, body):
-        print(f"Received response for request {request_id}: {body}")
-        response = json.loads(body)
-        if response.get('request_id') == request_id:
-            aggregated_data.append(response)
-        return aggregated_data
-    # debug kenapa ini gabisa ngereturn semangat ia jgn mati dulu
- 
-    while True:
-        rabbitmq_client.consume_messages(BROKERRESPONSE, callback)
-        time.sleep(1)
-        print ("lalala")
-        if len(aggregated_data) >= 1:  
-            print("haha")
-            return jsonify({"request_id": request_id, "data": aggregated_data}) 
-
-    
-# TODO: buat callback jadi masukin data ke list, terus return list nya ke HTTP
-# Jadi HTTP itu bakal ngelakuin:
-# request dan diolah lalu dapet data
-# data yang didapetin dimasukin ke list, yang bakal di return
+    if aggregated_data:
+        return jsonify({"request_id": request_id, "data": aggregated_data})
+    else:
+        return jsonify({"request_id": request_id, "data": "No data available"})
 
 if __name__ == '__main__':
     app.run(debug=True)
