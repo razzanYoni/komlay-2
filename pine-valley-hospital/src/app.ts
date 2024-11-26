@@ -51,6 +51,19 @@ class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
     },
   ];
 
+  async subscribe() {
+    // Subscribe to broker, so broker will wait
+    try {
+      const response = await axios.post<String[]>(brokerURL + "/subscribe", {
+        name: "Pine Valley",
+      });
+
+      console.log(response.data);
+    } catch (error) {
+      console.error("Error fetching queues:", error);
+    }
+  }
+
   async connect() {
     try {
       console.log("🔌 Connecting to RabbitMQ Server");
@@ -62,17 +75,7 @@ class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
       // Declare queues
       await this.channel.assertQueue(rmqQueue, { durable: false });
       await this.channel.assertQueue(rmqBrokerQueue, { durable: false });
-
-      // Subscribe to broker, so broker will wait
-      try {
-        const response = await axios.post<String[]>(brokerURL + "/subscribe", {
-          name: "Pine Valley",
-        });
-
-        console.log(response.data);
-      } catch (error) {
-        console.error("Error fetching queues:", error);
-      }
+      await this.subscribe();
     } catch (error) {
       console.error("❌ RabbitMQ Connection Failed:", error);
       throw error;
@@ -114,6 +117,7 @@ class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
             // Parse incoming request
             const requestData = JSON.parse(msg.content.toString());
             console.log("Received doctor request:", requestData);
+            await this.subscribe();
 
             // Find matching doctors based on request type
             const matchedDoctors = this.findMatchingDoctors(requestData);

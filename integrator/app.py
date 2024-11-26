@@ -11,14 +11,16 @@ load_dotenv()
 
 class Subscriber:
   def __init__(self):
-    self.subscriber = []
+    self.subscriber = set()
   
   def subscribe(self, name):
-    if name not in self.subscriber:
-      self.subscriber.append(name)
+    self.subscriber.add(name)
   
   def has_all(self, array):
-    return True if array in self.subscriber else False
+    condition = True if array == self.subscriber else False
+    if condition:
+      print("SUBSCRIBER DONE")
+    return condition
 
 class RabbitMQClient:
   def __init__(self, host="localhost"):
@@ -59,8 +61,8 @@ class RabbitMQClient:
     self.channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
     print(f"Waiting for response for request_id: {request_id}")
     while time.time() - start_time < timeout:
-        self.channel.connection.process_data_events(time_limit=2)
-        if message_list and subscriber.has_all():  
+        self.channel.connection.process_data_events(time_limit=1)
+        if message_list and subscriber.has_all(received_names):  
             break
     
     self.channel.stop_consuming()
@@ -122,7 +124,7 @@ def healthcare_api():
 @app.route('/subscribe', methods=['POST'])
 def subscribe():
   subscriber.subscribe(request.get_json()['name'])
-  return subscriber.subscriber
+  return list(subscriber.subscriber)
 
 if __name__ == '__main__':
     app.run(debug=True)
