@@ -36,10 +36,11 @@ class RabbitMQClient:
     start_time = time.time()
     
     def callback(ch, method, properties, body):
-        response = json.loads(body)
-        if response.get('request_id') == request_id:
-            message_list.append(response)
-            print(f"Received response: {response}, request_id: {request_id}")
+        response_list = json.loads(body)
+        for response in response_list:
+          if response.get('request_id') == request_id:
+              message_list.append(response)
+              print(f"Received response: {response}, request_id: {request_id}")
     
     self.channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
     print(f"Waiting for response for request_id: {request_id}")
