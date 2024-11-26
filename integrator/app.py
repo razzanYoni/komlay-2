@@ -67,8 +67,16 @@ BROKERRESPONSE = os.environ.get('BROKER_RESPONSE_QUEUE')
 def healthcare_api():
     # Generate a unique request id
     request_id = str(uuid.uuid4())
-
     data = request.json
+    if isinstance(data, str):  # Check if the input is a string
+        try:
+            # Attempt to parse the string as JSON
+            data = json.loads(data)
+        except json.JSONDecodeError:
+            # Handle invalid JSON string
+            print("Invalid JSON string!")
+            return None
+    
     data['request_id'] = request_id
 
     # Publish data to RabbitMQ
