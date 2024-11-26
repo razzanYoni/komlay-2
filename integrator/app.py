@@ -9,6 +9,17 @@ import time
 
 load_dotenv()
 
+class Subscriber:
+  def __init__(self):
+    self.subscriber = []
+  
+  def subscribe(self, name):
+    if name not in self.subscriber:
+      self.subscriber.append(name)
+  
+  def has_all(self, array):
+    return True if array in self.subscriber else False
+
 class RabbitMQClient:
   def __init__(self, host="localhost"):
     self.host = host
@@ -35,18 +46,21 @@ class RabbitMQClient:
     
     start_time = time.time()
     
+    received_names = set()
+    
     def callback(ch, method, properties, body):
         response_list = json.loads(body)
         for response in response_list:
           if response.get('request_id') == request_id:
               message_list.append(response)
+              received_names.add(response.get("hospital"))
               print(f"Received response: {response}, request_id: {request_id}")
     
     self.channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
     print(f"Waiting for response for request_id: {request_id}")
     while time.time() - start_time < timeout:
-        self.channel.connection.process_data_events(time_limit=1)
-        if message_list:  
+        self.channel.connection.process_data_events(time_limit=2)
+        if message_list and subscriber.has_all():  
             break
     
     self.channel.stop_consuming()
@@ -63,6 +77,8 @@ rabbitmq_client = RabbitMQClient()
 PINEVALLEY = os.environ.get('PINEVALLEY_QUEUE')
 GRANDOAK = os.environ.get('GRANDOAK_QUEUE')
 BROKERRESPONSE = os.environ.get('BROKER_RESPONSE_QUEUE')
+
+subscriber = Subscriber()
 
 @app.route('/healthcare', methods=['GET'])
 def healthcare_api():
@@ -102,6 +118,11 @@ def healthcare_api():
         return jsonify({"request_id": request_id, "data": aggregated_data})
     else:
         return jsonify({"request_id": request_id, "data": "No data available"})
+      
+@app.route('/subscribe', methods=['POST'])
+def subscribe():
+  subscriber.subscribe(request.get_json()['name'])
+  return subscriber.subscriber
 
 if __name__ == '__main__':
     app.run(debug=True)

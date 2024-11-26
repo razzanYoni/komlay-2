@@ -1,11 +1,13 @@
 import client, { Channel, Connection } from "amqplib";
 import dotenv from "dotenv";
+import axios from "axios";
 
 dotenv.config();
 
 // Config
 const rmqQueue = String(process.env.RABBITMQ_QUEUE);
 const rmqBrokerQueue = String(process.env.BROKER_RESPONSE_QUEUE);
+const brokerURL = String(process.env.BROKER_URL);
 
 // Interfaces
 interface Doctor {
@@ -60,6 +62,17 @@ class RabbitMQDoctorRequestProcessor implements DoctorRequestProcessor {
       // Declare queues
       await this.channel.assertQueue(rmqQueue, { durable: false });
       await this.channel.assertQueue(rmqBrokerQueue, { durable: false });
+
+      // Subscribe to broker, so broker will wait
+      try {
+        const response = await axios.post<String[]>(brokerURL + "/subscribe", {
+          name: "Pine Valley",
+        });
+
+        console.log(response.data);
+      } catch (error) {
+        console.error("Error fetching queues:", error);
+      }
     } catch (error) {
       console.error("❌ RabbitMQ Connection Failed:", error);
       throw error;
